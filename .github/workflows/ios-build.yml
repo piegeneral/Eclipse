@@ -1,3 +1,4 @@
+
 name: Eclipse iOS Build
 
 on:
@@ -9,13 +10,15 @@ on:
 jobs:
   build:
     runs-on: macos-15
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Generate project
+      - name: Generate Xcode project
         run: xcodegen generate
 
       - name: Build Eclipse
@@ -23,8 +26,24 @@ jobs:
           xcodebuild \
             -project Eclipse.xcodeproj \
             -scheme Eclipse \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/Build/Products/Release-iphoneos/Eclipse.app build/Payload/
+          cd build
+          zip -qr Eclipse-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eclipse-unsigned-IPA
+          path: build/Eclipse-unsigned.ipa
